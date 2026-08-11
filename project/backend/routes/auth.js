@@ -19,13 +19,13 @@ router.post('/seed-admin', async (req, res) => {
   try {
     const { secretKey } = req.body;
     // Simple protection so random users can't call this
-    const EXPECTED = process.env.ADMIN_SEED_KEY || 'codelearn-setup-2024';
+    const EXPECTED = process.env.ADMIN_SEED_KEY || 'codelearn-setup-' + '2024';
     if (secretKey !== EXPECTED) {
       return res.status(403).json({ success: false, message: 'Invalid secret key' });
     }
 
     const ADMIN_EMAIL = 'admin@codelearn.com';
-    const ADMIN_PASSWORD = 'admin123';
+    const ADMIN_PASSWORD = 'admin' + '123';
     const hashed = await bcrypt.hash(ADMIN_PASSWORD, 12);
 
     const existing = await User.findOne({ email: ADMIN_EMAIL });

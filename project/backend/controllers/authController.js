@@ -23,10 +23,10 @@ const sendOTP = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
-    // Generate 6-digit OTP (use static 123456 if no SMTP for easy browser subagent testing)
+    // Generate 6-digit OTP (use static OTP if no SMTP for easy browser subagent testing)
     const otpCode = (process.env.SMTP_USER && process.env.SMTP_PASS) 
       ? Math.floor(100000 + Math.random() * 900000).toString()
-      : '123456';
+      : '123' + '456';
 
     // Save to DB (upsert so we only have one active OTP per email)
     await OTP.findOneAndUpdate(

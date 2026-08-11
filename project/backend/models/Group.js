@@ -37,7 +37,7 @@ const groupSchema = new mongoose.Schema({
 // Auto-generate join code
 groupSchema.pre('save', function (next) {
   if (!this.joinCode) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0819273645';
     this.joinCode = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   }
   next();

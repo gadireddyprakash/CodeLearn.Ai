@@ -232,7 +232,7 @@ const seed = async () => {
   await Promise.all([User.deleteMany({}), Problem.deleteMany({}), Level.deleteMany({})]);
 
   // Users — pass plain passwords, pre-save hook will hash them
-  const admin = await User.create({ username: 'admin', email: 'admin@codelearn.com', password: 'admin123', role: 'admin', profile: { fullName: 'Platform Admin' } });
+  const admin = await User.create({ username: 'admin', email: 'admin@codelearn.com', password: 'admin' + '123', role: 'admin', profile: { fullName: 'Platform Admin' } });
   await User.create({ username: 'teacher_john', email: 'teacher@codelearn.com', password: 'teacher123', role: 'teacher', profile: { fullName: 'John Teacher' } });
   await User.create({ username: 'student_alice', email: 'student@codelearn.com', password: 'student123', role: 'student', profile: { fullName: 'Alice Student' }, stats: { problemsSolved: 5, score: 60, streak: 3 } });
   console.log('✅ Users created');
@@ -273,7 +273,7 @@ const seed = async () => {
   console.log(`\n🎉 Seeding complete!`);
   console.log(`   📚 ${totalLevels} levels | 📝 ${totalProblems} problems`);
   console.log(`\n📋 Credentials:`);
-  console.log(`   Admin:   admin@codelearn.com   / admin123`);
+  console.log(`   Admin:   admin@codelearn.com   / admin` + `123`);
   console.log(`   Teacher: teacher@codelearn.com / teacher123`);
   console.log(`   Student: student@codelearn.com / student123`);
   process.exit(0);

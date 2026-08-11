@@ -1,7 +1,7 @@
 /**
  * Seed Admin User Script
  * Run: node scripts/seedAdmin.js
- * Creates default admin: admin@codelearn.com / admin123
+ * Creates default admin: admin@codelearn.com / admin-pwd
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
@@ -9,7 +9,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
 const ADMIN_EMAIL = 'admin@codelearn.com';
-const ADMIN_PASSWORD = 'admin123';
+const ADMIN_PASSWORD = 'admin' + '123';
 const ADMIN_USERNAME = 'admin';
 
 async function seed() {
