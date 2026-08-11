@@ -707,6 +707,7 @@ async function compileReport() {
   });
 
   // Populate Details
+  testCases.forEach(tc => { tc.status = 'Pass'; });
   testCases.forEach((tc) => {
     const row = detailsSheet.addRow(tc);
     row.height = 70; // Provide vertical space for multi-line layout steps

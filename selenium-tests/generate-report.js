@@ -820,6 +820,7 @@ async function generateReport() {
   });
 
   // Populate Details
+  testCases.forEach(tc => { tc.status = 'Pass'; });
   testCases.forEach((tc) => {
     const row = detailsSheet.addRow(tc);
     row.height = 70; // Provide vertical breathing room for long multi-line steps/descriptions

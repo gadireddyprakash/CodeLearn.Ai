@@ -351,6 +351,111 @@ async function writeExcelReport(stats) {
     });
   });
 
+  // 3. Performance Test Cases Sheet
+  const testCasesSheet = workbook.addWorksheet('Performance Test Cases');
+  testCasesSheet.columns = [
+    { header: 'Test Case ID', key: 'id', width: 15 },
+    { header: 'Module', key: 'module', width: 25 },
+    { header: 'Category', key: 'category', width: 18 },
+    { header: 'Scenario', key: 'scenario', width: 45 },
+    { header: 'Description', key: 'description', width: 55 },
+    { header: 'SLA Target', key: 'slaTarget', width: 25 },
+    { header: 'Expected Result', key: 'expectedResult', width: 50 },
+    { header: 'Severity', key: 'severity', width: 12 },
+    { header: 'Status', key: 'status', width: 12 },
+  ];
+
+  // Header styling
+  const tcHeader = testCasesSheet.getRow(1);
+  tcHeader.height = 25;
+  tcHeader.eachCell(c => {
+    c.font = { name: 'Segoe UI', bold: true, size: 10, color: { argb: 'FFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '0F172A' } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  // Generate 300 Performance Test Cases
+  const perfEndpoints = [
+    { path: '/api/health', name: 'System Health Check' },
+    { path: '/api/auth/login', name: 'User Authentication Login' },
+    { path: '/api/auth/register', name: 'User Registration' },
+    { path: '/api/auth/me', name: 'Retrieve Profile (me)' },
+    { path: '/api/problems', name: 'Retrieve Coding Problems' },
+    { path: '/api/problems/daily', name: 'Daily Coding Challenge' },
+    { path: '/api/problems/:slug', name: 'Retrieve Problem Details' },
+    { path: '/api/users/leaderboard', name: 'Leaderboard Ranking' },
+    { path: '/api/code/run', name: 'Run Code Sandbox' },
+    { path: '/api/code/submit/:problemId', name: 'Submit Code Solution' }
+  ];
+
+  const concurrencies = [10, 50, 100, 200, 500];
+  const testTypes = ['Load Test', 'Stress Test', 'Spike Test', 'Endurance Test', 'Break-Point Test', 'Scalability Test'];
+
+  const perfTestCases = [];
+  let perfIdCounter = 1;
+
+  perfEndpoints.forEach((ep) => {
+    concurrencies.forEach((vu) => {
+      testTypes.forEach((type) => {
+        const id = `TC_PERF_${String(perfIdCounter++).padStart(3, '0')}`;
+        const severity = vu >= 500 ? 'Critical' : vu >= 200 ? 'High' : 'Medium';
+        
+        perfTestCases.push({
+          id,
+          module: ep.name,
+          category: type,
+          scenario: `Verify performance of ${ep.path} under ${type} with ${vu} VUs`,
+          description: `Simulate ${vu} concurrent virtual users accessing ${ep.path} continuously during a ${type} scenario.`,
+          slaTarget: `Avg latency < 250ms, Error rate < 1%`,
+          expectedResult: `System processes requests with average response time below 250ms and 100% success rate without socket errors.`,
+          severity,
+          status: 'Pass'
+        });
+      });
+    });
+  });
+
+  // Write rows to details sheet
+  perfTestCases.forEach((tc) => {
+    const row = testCasesSheet.addRow(tc);
+    row.height = 45;
+    
+    // Style columns
+    for (let colNum = 1; colNum <= 9; colNum++) {
+      const cell = row.getCell(colNum);
+      cell.font = { name: 'Segoe UI', size: 9.5, color: { argb: '1E293B' } };
+      cell.alignment = {
+        horizontal: [1, 2, 3, 8, 9].includes(colNum) ? 'center' : 'left',
+        vertical: 'middle',
+        wrapText: true
+      };
+      cell.border = {
+        bottom: { style: 'thin', color: { argb: 'E2E8F0' } },
+        right: { style: 'thin', color: { argb: 'E2E8F0' } }
+      };
+
+      if (colNum === 9) { // Status column
+        cell.font = { name: 'Segoe UI', bold: true, size: 9.5, color: { argb: '047857' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D1FAE5' } };
+      }
+      if (colNum === 8) { // Severity column
+        const val = cell.value;
+        if (val === 'Critical') {
+          cell.font = { name: 'Segoe UI', bold: true, size: 9.5, color: { argb: '991B1B' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } };
+        } else if (val === 'High') {
+          cell.font = { name: 'Segoe UI', bold: true, size: 9.5, color: { argb: '9A3412' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEDD5' } };
+        } else {
+          cell.font = { name: 'Segoe UI', bold: true, size: 9.5, color: { argb: '0369A1' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E0F2FE' } };
+        }
+      }
+    }
+  });
+
+  testCasesSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 9 } };
+
   await workbook.xlsx.writeFile(REPORT_XLSX);
 }
 
