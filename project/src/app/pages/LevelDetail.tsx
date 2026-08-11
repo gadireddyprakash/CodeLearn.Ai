@@ -13,14 +13,9 @@ export default function LevelDetail() {
   const [showMCQSection, setShowMCQSection] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
     const foundLevel = mockLevels.find((l) => l.id === Number(levelId));
     if (!foundLevel) {
-      navigate('/levels');
+      navigate('/levels-legacy'); // Wait! In routes.tsx, /levels is now /levels/:language, and /levels-legacy is Levels. Let's redirect to /levels-legacy.
       return;
     }
 

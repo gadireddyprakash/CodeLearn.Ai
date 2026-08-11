@@ -41,6 +41,8 @@ const NotFound = () => (
   </div>
 );
 
+import ProtectedRoute from './components/ProtectedRoute';
+
 export const router = createBrowserRouter([
   // Public
   { path: '/', element: <Home /> },
@@ -48,46 +50,51 @@ export const router = createBrowserRouter([
   { path: '/register', element: <Register /> },
   { path: '/signup', element: <Register /> },
   { path: '/forgot-password', element: <ForgotPassword /> },
-
-  // Core app
-  { path: '/dashboard', element: <Dashboard /> },
-  { path: '/profile', element: <Profile /> },
-
-  // Existing learning path (preserved)
-  { path: '/select-language-legacy', element: <SelectLanguage /> },
-  { path: '/levels-legacy', element: <Levels /> },
-  { path: '/level-legacy/:levelId', element: <LevelDetail /> },
-  { path: '/level-legacy/:levelId/mcq', element: <MCQTest /> },
-  { path: '/level-legacy/:levelId/code', element: <CodingChallenge /> },
-
-  // New Level Progression (10 Levels)
-  { path: '/select-language', element: <LanguageSelection /> },
-  { path: '/levels/:language', element: <LevelMap /> },
-  { path: '/levels/:language/:levelNumber/concept', element: <LevelConcept /> },
-  { path: '/levels/:language/:levelNumber/test', element: <LevelTest /> },
-
-  // Problems
-  { path: '/problems', element: <ProblemsPage /> },
-  { path: '/problems/:slug', element: <ProblemSolverPage /> },
-
-  // Playground
-  { path: '/playground', element: <PlaygroundPage /> },
-
-  // LMS
-  { path: '/lms', element: <LMSPage /> },
-  { path: '/lms/groups/:id', element: <GroupDetailPage /> },
-
-  // AI
-  { path: '/resume', element: <ResumeBuilderPage /> },
-  { path: '/recommendations', element: <RecommendationsPage /> },
-
-  // Leaderboard (both paths point to new page)
-  { path: '/leaderboard', element: <LeaderboardPage /> },
-  { path: '/rankings', element: <LeaderboardPage /> },
-
-  // Admin
   { path: '/admin/login', element: <AdminLogin /> },
-  { path: '/admin/dashboard', element: <AdminDashboard /> },
+
+  // Protected App Routes
+  {
+    element: <ProtectedRoute />,
+    children: [
+      { path: '/dashboard', element: <Dashboard /> },
+      { path: '/profile', element: <Profile /> },
+      
+      // Existing learning path (preserved)
+      { path: '/select-language-legacy', element: <SelectLanguage /> },
+      { path: '/levels-legacy', element: <Levels /> },
+      { path: '/level-legacy/:levelId', element: <LevelDetail /> },
+      { path: '/level-legacy/:levelId/mcq', element: <MCQTest /> },
+      { path: '/level-legacy/:levelId/code', element: <CodingChallenge /> },
+
+      // New Level Progression (10 Levels)
+      { path: '/select-language', element: <LanguageSelection /> },
+      { path: '/levels/:language', element: <LevelMap /> },
+      { path: '/levels/:language/:levelNumber/concept', element: <LevelConcept /> },
+      { path: '/levels/:language/:levelNumber/test', element: <LevelTest /> },
+
+      // Problems
+      { path: '/problems', element: <ProblemsPage /> },
+      { path: '/problems/:slug', element: <ProblemSolverPage /> },
+
+      // Playground
+      { path: '/playground', element: <PlaygroundPage /> },
+
+      // LMS
+      { path: '/lms', element: <LMSPage /> },
+      { path: '/lms/groups/:id', element: <GroupDetailPage /> },
+
+      // AI
+      { path: '/resume', element: <ResumeBuilderPage /> },
+      { path: '/recommendations', element: <RecommendationsPage /> },
+
+      // Leaderboard
+      { path: '/leaderboard', element: <LeaderboardPage /> },
+      { path: '/rankings', element: <LeaderboardPage /> },
+
+      // Admin Dashboard (requires admin auth inside the component)
+      { path: '/admin/dashboard', element: <AdminDashboard /> },
+    ]
+  },
 
   { path: '*', element: <NotFound /> },
 ]);

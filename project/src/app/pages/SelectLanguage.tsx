@@ -16,11 +16,6 @@ export default function SelectLanguage() {
   const [languageProgress, setLanguageProgress] = useState<Record<string, LanguageProgress>>({});
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
     // Load progress for both languages
     if (user) {
       const javaProgress = localStorage.getItem('progress_java');

@@ -17,7 +17,6 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => { if (!isAuthenticated) navigate('/login'); }, [isAuthenticated, navigate]);
   useEffect(() => { if (user?.profile) setProfile({ ...user.profile }); }, [user]);
 
   const handleSave = async () => {

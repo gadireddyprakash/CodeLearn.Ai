@@ -54,8 +54,6 @@ export default function Dashboard() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessage, setAiMessage] = useState('Welcome! I am your AI Tutor. Run your code or ask me to explain the current approach.');
 
-  useEffect(() => { if (!isAuthenticated) navigate('/login'); }, [isAuthenticated, navigate]);
-
   useEffect(() => {
     if (!user) return;
     Promise.allSettled([
