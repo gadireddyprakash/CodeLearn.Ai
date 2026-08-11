@@ -1,0 +1,9 @@
+{
+  "name": "codelearn-performance-tests",
+  "version": "1.0.0",
+  "description": "Baseline/Load Testing Suite for CodeLearn.Ai Backend",
+  "main": "load-test.js",
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}
