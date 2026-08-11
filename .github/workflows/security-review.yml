@@ -1,0 +1,380 @@
+name: 🔐 Security Review — CodeLearn.Ai
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  # JOB 1: Backend Technology Discovery
+  # ────────────────────────────────────────────────────────────────
+  discover:
+    name: 🔍 Backend Discovery
+    runs-on: ubuntu-latest
+    outputs:
+      backend_tech: ${{ steps.detect.outputs.tech }}
+      has_package_json: ${{ steps.detect.outputs.has_package_json }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect backend technology
+        id: detect
+        run: |
+          if [ -f "project/backend/package.json" ]; then
+            FRAMEWORK=$(node -e "const p=require('./project/backend/package.json'); const deps=Object.keys({...p.dependencies,...p.devDependencies}); const fw=deps.includes('express')?'express/node':deps.includes('fastify')?'fastify/node':'node'; console.log(fw);")
+            echo "tech=$FRAMEWORK" >> $GITHUB_OUTPUT
+            echo "has_package_json=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected: $FRAMEWORK"
+          elif [ -f "pom.xml" ]; then
+            echo "tech=java/spring" >> $GITHUB_OUTPUT
+            echo "has_package_json=false" >> $GITHUB_OUTPUT
+          elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
+            echo "tech=python/flask-or-fastapi" >> $GITHUB_OUTPUT
+            echo "has_package_json=false" >> $GITHUB_OUTPUT
+          else
+            echo "tech=unknown" >> $GITHUB_OUTPUT
+            echo "has_package_json=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Print discovery summary
+        run: |
+          echo "## 🔍 Backend Discovery" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Framework | ${{ steps.detect.outputs.tech }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Has package.json | ${{ steps.detect.outputs.has_package_json }} |" >> $GITHUB_STEP_SUMMARY
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 2: Secret Scanning (Gitleaks)
+  # ────────────────────────────────────────────────────────────────
+  secret-scan:
+    name: 🔑 Secret Scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    needs: discover
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history for secret scan
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # Optional for SARIF upload
+        continue-on-error: true
+
+      - name: Upload Gitleaks results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: results.sarif
+          if-no-files-found: ignore
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 3: Dependency Vulnerability Scanning (NPM Audit)
+  # ────────────────────────────────────────────────────────────────
+  dependency-scan:
+    name: 📦 Dependency Scan (npm audit)
+    runs-on: ubuntu-latest
+    needs: discover
+    if: needs.discover.outputs.has_package_json == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        run: |
+          cd project/backend
+          npm ci --ignore-scripts
+
+      - name: Run npm audit (backend)
+        id: npm_audit
+        run: |
+          cd project/backend
+          npm audit --json > ../../audit-report.json 2>&1 || true
+          CRITICAL=$(cat ../../audit-report.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.metadata?.vulnerabilities?.critical || 0)")
+          HIGH=$(cat ../../audit-report.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.metadata?.vulnerabilities?.high || 0)")
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          echo "### 📦 NPM Audit Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload npm audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: audit-report.json
+
+      - name: Fail on critical dependency vulnerabilities
+        if: steps.npm_audit.outputs.critical > 0
+        run: |
+          echo "❌ CRITICAL dependency vulnerabilities found. Blocking pipeline."
+          exit 1
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 4: Static Application Security Testing (Semgrep SAST)
+  # ────────────────────────────────────────────────────────────────
+  sast-semgrep:
+    name: 🔬 SAST Scan (Semgrep)
+    runs-on: ubuntu-latest
+    needs: discover
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep SAST
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/javascript
+            p/nodejs
+            p/express
+            p/jwt
+            p/sql-injection
+            p/owasp-top-ten
+            p/secrets
+          generateSarif: "1"
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload Semgrep SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+        continue-on-error: true
+
+      - name: Upload Semgrep report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-report
+          path: semgrep.sarif
+          if-no-files-found: ignore
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 5: Custom SAST Rules — Hardcoded Secrets & Known Patterns
+  # ────────────────────────────────────────────────────────────────
+  custom-sast:
+    name: 🛡️ Custom SAST — Hardcoded Credentials & Config
+    runs-on: ubuntu-latest
+    needs: discover
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for hardcoded secrets patterns
+        id: secrets_check
+        run: |
+          CRITICAL_FOUND=0
+          REPORT_FILE="custom-sast-report.txt"
+          echo "=== Custom SAST Report ===" > $REPORT_FILE
+          echo "Date: $(date -u)" >> $REPORT_FILE
+          echo "" >> $REPORT_FILE
+
+          # Check for hardcoded passwords
+          if grep -rn "admin123\|password123\|123456\|codelearn-setup-2024" project/backend --include="*.js" --include="*.ts" 2>/dev/null; then
+            echo "❌ CRITICAL: Hardcoded credentials found!" >> $REPORT_FILE
+            grep -rn "admin123\|password123\|123456\|codelearn-setup-2024" project/backend --include="*.js" >> $REPORT_FILE 2>/dev/null || true
+            CRITICAL_FOUND=1
+          fi
+
+          # Check for wildcard CORS
+          if grep -rn "callback(null, true)" project/backend --include="*.js" 2>/dev/null; then
+            echo "❌ HIGH: Wildcard CORS detected!" >> $REPORT_FILE
+            CRITICAL_FOUND=1
+          fi
+
+          # Check for commented-out security checks
+          if grep -rn "Bypassed\|bypassed\|TODO.*auth\|FIXME.*security" project/backend --include="*.js" 2>/dev/null; then
+            echo "⚠️ HIGH: Commented-out security checks found!" >> $REPORT_FILE
+            grep -rn "Bypassed\|bypassed" project/backend --include="*.js" >> $REPORT_FILE 2>/dev/null || true
+          fi
+
+          # Check for console.log with sensitive data
+          if grep -rn "console.log.*otp\|console.log.*password\|console.log.*token" project/backend --include="*.js" -i 2>/dev/null; then
+            echo "⚠️ HIGH: Sensitive data logged to console!" >> $REPORT_FILE
+          fi
+
+          # Check for missing helmet
+          if ! grep -rn "helmet" project/backend --include="*.js" 2>/dev/null | grep -v node_modules | grep -q "require"; then
+            echo "⚠️ HIGH: Helmet security headers not configured!" >> $REPORT_FILE
+          fi
+
+          cat $REPORT_FILE
+          echo "critical_found=$CRITICAL_FOUND" >> $GITHUB_OUTPUT
+
+          # Write to Actions Summary
+          echo "### 🛡️ Custom SAST Results" >> $GITHUB_STEP_SUMMARY
+          cat $REPORT_FILE >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload custom SAST report
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-sast-report
+          path: custom-sast-report.txt
+
+      - name: Fail on critical custom SAST findings
+        if: steps.secrets_check.outputs.critical_found == '1'
+        run: |
+          echo "❌ CRITICAL custom SAST findings detected. Review and fix before merging."
+          exit 1
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 6: Container / Image Scan (Trivy — if Dockerfile exists)
+  # ────────────────────────────────────────────────────────────────
+  trivy-scan:
+    name: 🐳 Container Scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: discover
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'project/backend'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+        continue-on-error: true
+
+      - name: Upload Trivy SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+      - name: Upload Trivy artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-report
+          path: trivy-results.sarif
+          if-no-files-found: ignore
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 7: API Security Checks (Live DAST — if API URL provided)
+  # ────────────────────────────────────────────────────────────────
+  dast-api:
+    name: 🌐 API Security Testing (DAST)
+    runs-on: ubuntu-latest
+    needs: discover
+    if: vars.API_BASE_URL != ''
+    env:
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run API security tests
+        run: |
+          node scripts/security/dast-api-tests.js
+        continue-on-error: true
+
+      - name: Upload DAST report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dast-api-report
+          path: dast-report.json
+          if-no-files-found: ignore
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 8: Generate Consolidated Security Report
+  # ────────────────────────────────────────────────────────────────
+  generate-report:
+    name: 📊 Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [discover, dependency-scan, sast-semgrep, custom-sast, trivy-scan]
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: security-artifacts
+
+      - name: Generate consolidated markdown report
+        run: |
+          echo "# 🔐 Security Review Report — CodeLearn.Ai" > consolidated-report.md
+          echo "**Generated:** $(date -u)" >> consolidated-report.md
+          echo "**Commit:** ${{ github.sha }}" >> consolidated-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> consolidated-report.md
+          echo "" >> consolidated-report.md
+          cat "project/Vulnerability Test Results/executive-summary.md" >> consolidated-report.md 2>/dev/null || echo "Executive summary not found" >> consolidated-report.md
+          echo "" >> consolidated-report.md
+          cat "project/Vulnerability Test Results/security-review.md" >> consolidated-report.md 2>/dev/null || true
+
+      - name: Publish to GitHub Actions Summary
+        run: cat consolidated-report.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload consolidated report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-consolidated-report
+          path: consolidated-report.md
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 9: Final Gate — Fail Only on Critical Findings
+  # ────────────────────────────────────────────────────────────────
+  security-gate:
+    name: 🚦 Security Gate
+    runs-on: ubuntu-latest
+    needs: [custom-sast, dependency-scan]
+    if: always()
+    steps:
+      - name: Evaluate security gate
+        run: |
+          CUSTOM_SAST="${{ needs.custom-sast.result }}"
+          DEP_SCAN="${{ needs.dependency-scan.result }}"
+
+          echo "Custom SAST result: $CUSTOM_SAST"
+          echo "Dependency scan result: $DEP_SCAN"
+
+          if [ "$CUSTOM_SAST" == "failure" ] || [ "$DEP_SCAN" == "failure" ]; then
+            echo "❌ SECURITY GATE FAILED: Critical vulnerabilities detected."
+            echo "Review the security artifacts uploaded to this workflow run."
+            echo ""
+            echo "### ❌ Security Gate: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "Critical vulnerabilities were found. **Do not merge this PR.**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ SECURITY GATE PASSED: No critical blocking issues."
+            echo "### ✅ Security Gate: PASSED" >> $GITHUB_STEP_SUMMARY
+          fi

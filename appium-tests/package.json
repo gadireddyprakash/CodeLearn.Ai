@@ -1,0 +1,15 @@
+{
+  "name": "codelearn-appium-tests",
+  "version": "1.0.0",
+  "description": "Appium Mobile E2E Tests and Test Cases Generator for CodeLearn Mobile Login",
+  "main": "tests/appium-login-tests.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node tests/appium-login-tests.js",
+    "generate-report": "node generate-report.js"
+  },
+  "dependencies": {
+    "webdriverio": "^8.32.4",
+    "exceljs": "^4.4.0"
+  }
+}

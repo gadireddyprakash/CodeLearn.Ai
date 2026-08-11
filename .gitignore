@@ -1,0 +1,49 @@
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.antigravity-ide/
+.gemini/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment / Secrets — NEVER commit these
+.env
+**/.env
+!**/.env.example
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Android
+project/android/local.properties
+project/android/.gradle/
+project/android/app/build/
+project/android/build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test artifacts
+dast-report.json
+audit-report.json
+semgrep.sarif
+trivy-results.sarif
+custom-sast-report.txt
+
+# Capacitor
+.ionic/
+
+# Python
+__pycache__/
+*.pyc
+.env/
+venv/

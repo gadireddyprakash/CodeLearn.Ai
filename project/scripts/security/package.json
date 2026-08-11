@@ -1,0 +1,16 @@
+{
+  "name": "security",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dast-api-tests.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "exceljs": "^4.4.0"
+  }
+}

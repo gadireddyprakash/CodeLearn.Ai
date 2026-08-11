@@ -1,0 +1,15 @@
+{
+  "name": "codelearn-selenium-tests",
+  "version": "1.0.0",
+  "description": "Selenium E2E Tests and Test Cases Generator for CodeLearn Login",
+  "main": "tests/login-tests.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node tests/login-tests.js",
+    "generate-report": "node generate-report.js"
+  },
+  "dependencies": {
+    "selenium-webdriver": "^4.18.1",
+    "exceljs": "^4.4.0"
+  }
+}
