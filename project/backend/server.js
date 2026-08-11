@@ -14,9 +14,15 @@ app.use((req, res, next) => {
   console.log(`📡 [${new Date().toLocaleTimeString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
   next();
 });
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:8100',
+];
 app.use(cors({
   origin: function (origin, callback) {
-    callback(null, true);
+    const isAllowed = !origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production';
+    callback(null, isAllowed);
   },
   credentials: true,
 }));
