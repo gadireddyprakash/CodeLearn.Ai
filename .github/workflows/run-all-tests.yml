@@ -1,0 +1,95 @@
+name: 🧪 Automated Test Pipeline & Excel Reports
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+jobs:
+  run-tests:
+    name: 🧪 Run All 4 Tests & Generate Excel Reports
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            selenium-tests/package-lock.json
+            appium-tests/package-lock.json
+            project/scripts/security/package-lock.json
+            project/scripts/performance/package-lock.json
+            project/backend/package-lock.json
+
+      # ─── TEST 1: Selenium Web Test Excel Report ─────────────────────────────
+      - name: 🌐 Generate Selenium Web QA Excel Report
+        run: |
+          cd selenium-tests
+          npm install
+          npm run generate-report
+
+      # ─── TEST 2: Appium Mobile Test Excel Report ────────────────────────────
+      - name: 📱 Generate Appium Mobile QA Excel Report
+        run: |
+          cd appium-tests
+          npm install
+          npm run generate-report
+
+      # ─── TEST 3: Security Assessment Excel Report ───────────────────────────
+      - name: 🔐 Generate Security Findings & Endpoint Inventory Excel
+        run: |
+          cd project/scripts/security
+          npm install
+          node generate-security-excel.js
+
+      # ─── TEST 4: Performance Load Test Excel Report ─────────────────────────
+      - name: 🚀 Start Backend API Server
+        run: |
+          cp project/backend/.env.example project/backend/.env
+          cd project/backend
+          npm install
+          node server.js &
+          
+      - name: ⏳ Wait for API Server to be Online
+        run: |
+          echo "Waiting for backend API on port 5000..."
+          for i in {1..30}; do
+            curl -s http://localhost:5000/api/health && exit 0
+            sleep 1
+          done
+          echo "❌ API server failed to start in time"
+          exit 1
+
+      - name: ⚡ Run Concurrency Load Test & Generate Excel Report
+        run: |
+          cd project/scripts/performance
+          npm install
+          # Run load test with 100 VUs for 15s in CI for verification
+          node load-test.js http://localhost:5000/api/health 100 15
+
+      # ─── ARTIFACT UPLOAD ───────────────────────────────────────────────────
+      - name: 📦 Upload All Excel Test Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-excel-test-reports
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            selenium-tests/login_test_cases_report.xlsx
+            appium-tests/appium_test_cases_report.xlsx
+            project/Vulnerability Test Results/findings.xlsx
+            project/Vulnerability Test Results/endpoint-inventory.xlsx
+            project/Performance Test Results/load-test-report.xlsx
