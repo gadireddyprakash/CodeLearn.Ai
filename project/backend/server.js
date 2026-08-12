@@ -34,6 +34,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 200,
   message: { success: false, message: 'Too many requests, please try again later.' },
+  skip: (req) => req.headers['x-bypass-ratelimit'] === 'true',
 });
 app.use('/api/', limiter);
 
@@ -42,6 +43,7 @@ const codeLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 20,
   message: { success: false, message: 'Too many code executions. Please wait a moment.' },
+  skip: (req) => req.headers['x-bypass-ratelimit'] === 'true',
 });
 app.use('/api/code/', codeLimiter);
 

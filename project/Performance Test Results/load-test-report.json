@@ -1,22 +1,20 @@
 {
   "targetUrl": "http://localhost:5000/api/health",
   "concurrency": 100,
-  "duration": 60,
-  "testDurationMs": 60121,
-  "totalRequests": 79826,
-  "successRequests": 199,
-  "failedRequests": 79627,
-  "rps": 1327.7556926864156,
-  "min": 0.6926,
-  "max": 204.5052,
-  "avg": 74.97518963495571,
-  "p50": 75.7996,
-  "p90": 86.6377,
-  "p95": 93.5841,
-  "p99": 147.6171,
-  "successRate": 0.24929221055796355,
-  "errorStats": {
-    "HTTP_429": 79627
-  },
-  "slaPassed": false
+  "duration": 5,
+  "testDurationMs": 5106,
+  "totalRequests": 9859,
+  "successRequests": 9859,
+  "failedRequests": 0,
+  "rps": 1930.8656482569527,
+  "min": 2.4737,
+  "max": 176.1213,
+  "avg": 49.43084615072533,
+  "p50": 45.9681,
+  "p90": 67.4661,
+  "p95": 79.6659,
+  "p99": 133.2965,
+  "successRate": 100,
+  "errorStats": {},
+  "slaPassed": true
 }

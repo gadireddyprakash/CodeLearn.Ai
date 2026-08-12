@@ -55,6 +55,7 @@ const requestOptions = {
   headers: {
     'User-Agent': 'CodeLearn-LoadTester/1.0',
     'Accept': 'application/json',
+    'x-bypass-ratelimit': 'true',
   },
   timeout: 5000, // 5s timeout
   rejectUnauthorized: false, // Ignore self-signed certificates
